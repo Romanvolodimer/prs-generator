@@ -60,9 +60,8 @@ ${flowDirectionXML}
                 <product>8716867000016</product>
                 <connecting_Domain.mRID codingScheme="A01">10Y1001C--000182</connecting_Domain.mRID>
                 <registeredResource.mRID codingScheme="A01">${registeredResource}</registeredResource.mRID>
-                <resourceProvider_MarketParticipant.mRID codingScheme="A01">
-                    ${installationCode}
-                </resourceProvider_MarketParticipant.mRID>
+                <resourceProvider_MarketParticipant.mRID
+                codingScheme="A01">${installationCode}</resourceProvider_MarketParticipant.mRID>
                 <measurement_Unit.name>MAW</measurement_Unit.name>
 
                 <Series_Period>
@@ -129,14 +128,11 @@ export function generateXML(data) {
     <type>A14</type>
     <process.processType>${processType}</process.processType>
 
-    <sender_MarketParticipant.mRID codingScheme="A01">
-        ${mRID}
-    </sender_MarketParticipant.mRID>
+    <sender_MarketParticipant.mRID
+    codingScheme="A01">${mRID}</sender_MarketParticipant.mRID>
     <sender_MarketParticipant.marketRole.type>A27</sender_MarketParticipant.marketRole.type>
 
-    <receiver_MarketParticipant.mRID codingScheme="A01">
-        10X1001C--00001X
-    </receiver_MarketParticipant.mRID>
+    <receiver_MarketParticipant.mRID codingScheme="A01">10X1001C--00001X</receiver_MarketParticipant.mRID>
     <receiver_MarketParticipant.marketRole.type>A04</receiver_MarketParticipant.marketRole.type>
 
     <createdDateTime>${createdDateTime}</createdDateTime>
