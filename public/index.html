@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>PRS Generator</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+    <h1>PRS Generator</h1>
+
+    <!-- ================= УСТАНОВКИ ================= -->
+
+    <section class="box">
+        <h2>Установки</h2>
+
+        <select id="installationSelect">
+            <option value="">— Оберіть установку —</option>
+        </select>
+
+        <button id="addInstallationBtn">➕ Додати установку</button>
+    </section>
+
+    <!-- ================= ФОРМА ================= -->
+
+    <section id="formContainer" class="box hidden">
+
+        <h2>Дані установки</h2>
+
+        <p><b>mRID:</b> <span id="currentMRID"></span></p>
+
+        <label>
+            Дата документа
+            <input class="tata" type="date" id="documentDate" />
+        </label>
+
+
+        <label>
+            revisionNumber
+            <input type="number" id="revisionNumber" value="1" />
+        </label>
+
+        <label>
+            process.processType
+            <select id="processType">
+                <option value="A12">A12</option>
+                <option value="A01">A01</option>
+                <option value="A02">A02</option>
+            </select>
+        </label>
+
+        <label>
+            sender_MarketParticipant.mRID@codingScheme
+            <input type="text" id="codingScheme" value="A01" />
+        </label>
+
+        <label>
+            Рік
+            <input class="rik" type="number" id="year" />
+        </label>
+
+        <hr />
+
+        <h3>Business Types</h3>
+
+        <div id="seriesContainer"></div>
+
+        <hr />
+
+        <button id="saveBtn">💾 Зберегти</button>
+        <button id="previewBtn">🔍 Preview JSON</button>
+        <button id="downloadXmlBtn">⬇️ Завантажити XML</button>
+
+    </section>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
