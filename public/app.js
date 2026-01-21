@@ -46,18 +46,28 @@ async function loadInstallations() {
   installations.forEach((inst) => {
     const option = document.createElement("option");
     option.value = inst.installationId;
-    option.textContent = inst.installationId;
+    option.textContent = inst.name;
     installationSelect.appendChild(option);
   });
 }
 
 addInstallationBtn.onclick = async () => {
+  const name = prompt("Введіть назву установки:");
+  if (!name) return;
+
   const mRID = prompt("Введіть mRID установки:");
   if (!mRID) return;
 
+  const registeredResource = prompt("Введіть registeredResource.mRID:");
+  if (!registeredResource) return;
+
   const inst = await api("/api/installations", {
     method: "POST",
-    body: JSON.stringify({ mRID }),
+    body: JSON.stringify({
+      name,
+      mRID,
+      registeredResource,
+    }),
   });
 
   await loadInstallations();

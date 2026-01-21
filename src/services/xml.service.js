@@ -6,7 +6,7 @@ function formatDate(date) {
 
 function minusOneDay(date) {
   const d = new Date(date);
-  d.setDate(d.getDate() + 1);
+  d.setDate(d.getDate() - 1);
   return d;
 }
 
@@ -45,6 +45,7 @@ function generateTimeSeries({
   timeIntervalXML,
   hours,
   installationCode,
+  registeredResource,
 }) {
   const flowDirectionXML = FLOW_DIRECTION_TYPES.includes(businessType)
     ? `
@@ -56,12 +57,12 @@ function generateTimeSeries({
                 <mRID>TS${index}</mRID>
                 <businessType>${businessType}</businessType>
 ${flowDirectionXML}
-
                 <product>8716867000016</product>
                 <connecting_Domain.mRID codingScheme="A01">10Y1001C--000182</connecting_Domain.mRID>
-                <registeredResource.mRID codingScheme="A01">62W426801429487J</registeredResource.mRID>
-                <resourceProvider_MarketParticipant.mRID 
-                codingScheme="A01">${installationCode}</resourceProvider_MarketParticipant.mRID>
+                <registeredResource.mRID codingScheme="A01">${registeredResource}</registeredResource.mRID>
+                <resourceProvider_MarketParticipant.mRID codingScheme="A01">
+                    ${installationCode}
+                </resourceProvider_MarketParticipant.mRID>
                 <measurement_Unit.name>MAW</measurement_Unit.name>
 
                 <Series_Period>
@@ -75,13 +76,7 @@ ${generatePoints(hours)}
 /* ===================== DOCUMENT ===================== */
 
 export function generateXML(data) {
-  const {
-    mRID, // код установки (62X...)
-    revisionNumber, // з форми
-    processType, // A01 / A12 / A02
-    documentDate, // YYYY-MM-DD
-    series, // businessType → { enabled, hours }
-  } = data;
+  const { mRID, revisionNumber, processType, documentDate, series } = data;
 
   const createdDateTime = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
@@ -89,11 +84,11 @@ export function generateXML(data) {
   const endDateObj = new Date(documentDate);
   const startDateObj = minusOneDay(endDateObj);
 
-  const startDate = formatDate(endDateObj);
-  const endDate = formatDate(startDateObj);
+  const startDate = formatDate(startDateObj);
+  const endDate = formatDate(endDateObj);
 
   /* ===== DOCUMENT MRID ===== */
-  const documentMRID = `${mRID}-${startDate}`;
+  const documentMRID = `${mRID}-${endDate}`;
 
   /* ===== TIME INTERVAL ===== */
   const timeIntervalXML = `
@@ -115,6 +110,7 @@ export function generateXML(data) {
       timeIntervalXML,
       hours: s.hours,
       installationCode: mRID,
+      registeredResource: data.registeredResource, // 👈
     });
 
     counter++;
@@ -133,12 +129,14 @@ export function generateXML(data) {
     <type>A14</type>
     <process.processType>${processType}</process.processType>
 
-    <sender_MarketParticipant.mRID
-    codingScheme="A01">${mRID}</sender_MarketParticipant.mRID>
+    <sender_MarketParticipant.mRID codingScheme="A01">
+        ${mRID}
+    </sender_MarketParticipant.mRID>
     <sender_MarketParticipant.marketRole.type>A27</sender_MarketParticipant.marketRole.type>
 
-    <receiver_MarketParticipant.mRID
-    codingScheme="A01">10X1001C--00001X</receiver_MarketParticipant.mRID>
+    <receiver_MarketParticipant.mRID codingScheme="A01">
+        10X1001C--00001X
+    </receiver_MarketParticipant.mRID>
     <receiver_MarketParticipant.marketRole.type>A04</receiver_MarketParticipant.marketRole.type>
 
     <createdDateTime>${createdDateTime}</createdDateTime>

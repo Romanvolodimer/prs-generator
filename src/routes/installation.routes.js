@@ -4,34 +4,62 @@ import {
   getInstallation,
   saveInstallation,
   listInstallations,
+  getInstallationById,
 } from "../services/installation.service.js";
+
+import { generateXML } from "../services/xml.service.js";
 
 const router = Router();
 
-router.get("/", listInstallations); // 👈 ВАЖЛИВО: ПЕРШИМ
+/* ================= HELPERS ================= */
+
+function safeFileName(name) {
+  return String(name)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9а-яёіїє_-]/gi, "");
+}
+
+/* ================= ROUTES ================= */
+
+// список установок
+router.get("/", listInstallations);
+
+// створити установку
 router.post("/", createInstallation);
+
+// отримати одну
 router.get("/:id", getInstallation);
+
+// зберегти зміни
 router.post("/:id", saveInstallation);
 
-export default router;
-import { generateXML } from "../services/xml.service.js";
-import fs from "fs";
-import path from "path";
+// 🔥 ЗАВАНТАЖЕННЯ XML
+router.get("/:id/xml", async (req, res) => {
+  const { id } = req.params;
 
-router.get("/:id/xml", (req, res) => {
-  const file = path.resolve("data/installations", `${req.params.id}.txt`);
-  if (!fs.existsSync(file)) {
+  // 1️⃣ Отримуємо установку
+  const installation = await getInstallationById(id);
+
+  if (!installation) {
     return res.status(404).send("Installation not found");
   }
 
-  const data = JSON.parse(fs.readFileSync(file, "utf-8"));
-  const xml = generateXML(data);
+  // 2️⃣ Генеруємо XML
+  const xml = generateXML(installation);
 
-  res.setHeader("Content-Type", "application/xml");
+  // 3️⃣ Назва файлу
+  const fileName = safeFileName(installation.name || installation.mRID);
+
+  // 4️⃣ Заголовки
+  res.setHeader("Content-Type", "application/xml; charset=utf-8");
   res.setHeader(
     "Content-Disposition",
-    `attachment; filename="${req.params.id}.xml"`,
+    `attachment; filename="${fileName}.xml"`,
   );
 
   res.send(xml);
 });
+
+export default router;

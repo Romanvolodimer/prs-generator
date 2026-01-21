@@ -1,68 +1,123 @@
 import fs from "fs";
 import path from "path";
-import { DEFAULTS } from "../../config/defaults.js";
+import { fileURLToPath } from "url";
 
-const DIR = path.resolve("data/installations");
+// === paths ===
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-/* ================= helpers ================= */
+const DATA_DIR = path.join(__dirname, "../../data/installations");
 
-function getFilePath(id) {
-  return path.join(DIR, `${id}.txt`);
+// === helpers ===
+function ensureDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
 }
 
-/* ================= services ================= */
+function getFilePath(id) {
+  return path.join(DATA_DIR, `${id}.json`);
+}
 
-// ➕ створення установки
+/* ================= EXPRESS HANDLERS ================= */
+
+export function listInstallations(req, res) {
+  ensureDir();
+
+  const files = fs.readdirSync(DATA_DIR);
+
+  const installations = files
+    .map((file) => {
+      const filePath = path.join(DATA_DIR, file);
+      const raw = fs.readFileSync(filePath, "utf-8").trim();
+
+      if (!raw) {
+        console.warn(`⚠️ Порожній файл: ${file}`);
+        return null;
+      }
+
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error(`❌ Зламаний JSON у файлі: ${file}`);
+        return null;
+      }
+    })
+    .filter(Boolean);
+
+  res.json(installations);
+}
+
 export function createInstallation(req, res) {
-  const { mRID } = req.body;
-  if (!mRID) return res.status(400).send("mRID required");
+  ensureDir();
 
-  const id = "inst_" + Date.now();
+  const { name, mRID, registeredResource } = req.body;
 
-  const data = {
-    installationId: id,
+  if (!name || !mRID || !registeredResource) {
+    return res.status(400).json({
+      error: "name, mRID і registeredResource обовʼязкові",
+    });
+  }
+
+  const installationId = `inst_${Date.now()}`;
+
+  const installation = {
+    installationId,
+    name,
     mRID,
-    ...DEFAULTS,
+    registeredResource, // 👈 НОВЕ
+    revisionNumber: 1,
+    processType: "A01",
+    codingScheme: "A01",
+    documentDate: null,
     year: new Date().getFullYear(),
     series: {},
   };
 
-  fs.writeFileSync(getFilePath(id), JSON.stringify(data, null, 2));
-  res.json(data);
+  fs.writeFileSync(
+    getFilePath(installationId),
+    JSON.stringify(installation, null, 2),
+    "utf-8",
+  );
+
+  res.json(installation);
 }
 
-// 📥 отримати одну установку
 export function getInstallation(req, res) {
-  const file = getFilePath(req.params.id);
+  const { id } = req.params;
 
-  if (!fs.existsSync(file)) {
-    return res.status(404).send("Installation not found");
+  const filePath = getFilePath(id);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "Installation not found" });
   }
 
-  res.json(JSON.parse(fs.readFileSync(file, "utf-8")));
+  const installation = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  res.json(installation);
 }
 
-// 💾 зберегти установку
 export function saveInstallation(req, res) {
-  const file = getFilePath(req.params.id);
-  fs.writeFileSync(file, JSON.stringify(req.body, null, 2));
+  const { id } = req.params;
+  const data = req.body;
 
-  res.json({ status: "ok" }); // ✅ JSON
+  const filePath = getFilePath(id);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "Installation not found" });
+  }
+
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+
+  res.json({ success: true });
 }
 
-// 📋 СПИСОК УСТАНОВОК  ← ОЦЕ НОВЕ
-export function listInstallations(req, res) {
-  if (!fs.existsSync(DIR)) return res.json([]);
+/* ================= CLEAN FUNCTIONS (IMPORTANT) ================= */
 
-  const files = fs.readdirSync(DIR).filter((f) => f.endsWith(".txt"));
+// 🔥 ОЦЯ ФУНКЦІЯ ПОТРІБНА ДЛЯ XML
+export function getInstallationById(id) {
+  const filePath = getFilePath(id);
 
-  const installations = files.map((file) => {
-    const data = JSON.parse(fs.readFileSync(path.join(DIR, file), "utf-8"));
-    return {
-      installationId: data.installationId,
-      mRID: data.mRID,
-    };
-  });
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
 
-  res.json(installations);
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }

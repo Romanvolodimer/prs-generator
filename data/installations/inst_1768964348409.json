@@ -1,0 +1,42 @@
+{
+  "installationId": "inst_1768964348409",
+  "name": "ENEY",
+  "mRID": "62X873297583319D",
+  "registeredResource": "62W857583623839L",
+  "revisionNumber": 1,
+  "processType": "A01",
+  "codingScheme": "A01",
+  "documentDate": "2026-01-21",
+  "year": 2026,
+  "series": {
+    "A01": {
+      "enabled": true,
+      "hours": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  }
+}
