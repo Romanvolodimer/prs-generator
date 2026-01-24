@@ -15,6 +15,8 @@ const seriesContainer = document.getElementById("seriesContainer");
 const saveBtn = document.getElementById("saveBtn");
 const previewBtn = document.getElementById("previewBtn");
 
+const deleteBtn = document.getElementById("deleteBtn");
+
 const BUSINESS_TYPES = {
   A01: "Плановий відпуск",
   A04: "Споживання",
@@ -219,5 +221,24 @@ downloadXmlBtn.onclick = () => {
     `/api/installations/${currentInstallation.installationId}/xml`,
     "_blank",
   );
+};
+/* ================= DOWNLOAD XML ================= */
+
+deleteBtn.onclick = async () => {
+  if (!currentInstallation) return;
+
+  const ok = confirm(
+    `Видалити установку "${currentInstallation.name}"? Це неможливо скасувати.`,
+  );
+
+  if (!ok) return;
+
+  await fetch(`/api/installations/${currentInstallation.installationId}`, {
+    method: "DELETE",
+  });
+
+  alert("Установку видалено");
+
+  location.reload(); // простий варіант
 };
 /* ================= DOWNLOAD XML ================= */
