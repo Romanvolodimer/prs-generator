@@ -1,123 +1,174 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { pool } from "../db.js";
 
-// === paths ===
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+/* ================= LIST INSTALLATIONS ================= */
+/**
+ * Повертає список установок (без серій)
+ */
+export async function listInstallations(req, res) {
+  const { rows } = await pool.query(`
+    SELECT
+      id AS "installationId",
+      name,
+      mrid AS "mRID",
+      registered_resource AS "registeredResource",
+      revision_number AS "revisionNumber",
+      process_type AS "processType",
+      coding_scheme AS "codingScheme",
+      document_date AS "documentDate",
+      EXTRACT(YEAR FROM COALESCE(document_date, NOW()))::int AS year
+    FROM prs_installations
+    ORDER BY created_at DESC
+  `);
 
-const DATA_DIR = path.join(__dirname, "../../data/installations");
-
-// === helpers ===
-function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
+  res.json(rows);
 }
 
-function getFilePath(id) {
-  return path.join(DATA_DIR, `${id}.json`);
-}
-
-/* ================= EXPRESS HANDLERS ================= */
-
-export function listInstallations(req, res) {
-  ensureDir();
-
-  const files = fs.readdirSync(DATA_DIR);
-
-  const installations = files
-    .map((file) => {
-      const filePath = path.join(DATA_DIR, file);
-      const raw = fs.readFileSync(filePath, "utf-8").trim();
-
-      if (!raw) {
-        console.warn(`⚠️ Порожній файл: ${file}`);
-        return null;
-      }
-
-      try {
-        return JSON.parse(raw);
-      } catch (e) {
-        console.error(`❌ Зламаний JSON у файлі: ${file}`);
-        return null;
-      }
-    })
-    .filter(Boolean);
-
-  res.json(installations);
-}
-
-export function createInstallation(req, res) {
-  ensureDir();
-
+/* ================= CREATE INSTALLATION ================= */
+/**
+ * Створює нову установку
+ */
+export async function createInstallation(req, res) {
   const { name, mRID, registeredResource } = req.body;
 
   if (!name || !mRID || !registeredResource) {
     return res.status(400).json({
-      error: "name, mRID і registeredResource обовʼязкові",
+      error: "name, mRID, registeredResource — обовʼязкові",
     });
   }
 
-  const installationId = `inst_${Date.now()}`;
-
-  const installation = {
-    installationId,
-    name,
-    mRID,
-    registeredResource, // 👈 НОВЕ
-    revisionNumber: 1,
-    processType: "A01",
-    codingScheme: "A01",
-    documentDate: null,
-    year: new Date().getFullYear(),
-    series: {},
-  };
-
-  fs.writeFileSync(
-    getFilePath(installationId),
-    JSON.stringify(installation, null, 2),
-    "utf-8",
+  const { rows } = await pool.query(
+    `
+    INSERT INTO prs_installations
+      (name, mrid, registered_resource)
+    VALUES ($1, $2, $3)
+    RETURNING
+      id AS "installationId",
+      name,
+      mrid AS "mRID",
+      registered_resource AS "registeredResource",
+      revision_number AS "revisionNumber",
+      process_type AS "processType",
+      coding_scheme AS "codingScheme",
+      document_date AS "documentDate"
+    `,
+    [name, mRID, registeredResource],
   );
 
-  res.json(installation);
+  res.status(201).json(rows[0]);
 }
 
-export function getInstallation(req, res) {
+/* ================= GET INSTALLATION ================= */
+/**
+ * Повертає установку + її серії
+ */
+export async function getInstallation(req, res) {
   const { id } = req.params;
 
-  const filePath = getFilePath(id);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "Installation not found" });
-  }
+  const client = await pool.connect();
+  try {
+    const instRes = await client.query(
+      `
+      SELECT
+        id AS "installationId",
+        name,
+        mrid AS "mRID",
+        registered_resource AS "registeredResource",
+        revision_number AS "revisionNumber",
+        process_type AS "processType",
+        coding_scheme AS "codingScheme",
+        document_date AS "documentDate"
+      FROM prs_installations
+      WHERE id = $1
+      `,
+      [id],
+    );
 
-  const installation = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  res.json(installation);
+    if (instRes.rowCount === 0) {
+      return res.status(404).json({ error: "Installation not found" });
+    }
+
+    const installation = instRes.rows[0];
+
+    const seriesRes = await client.query(
+      `
+      SELECT business_type, enabled, hours
+      FROM prs_series
+      WHERE installation_id = $1
+      `,
+      [id],
+    );
+
+    installation.series = {};
+    for (const row of seriesRes.rows) {
+      installation.series[row.business_type] = {
+        enabled: row.enabled,
+        hours: row.hours,
+      };
+    }
+
+    res.json(installation);
+  } finally {
+    client.release();
+  }
 }
 
-export function saveInstallation(req, res) {
+/* ================= SAVE INSTALLATION ================= */
+/**
+ * UPDATE установки + повний reset серій
+ */
+export async function saveInstallation(req, res) {
   const { id } = req.params;
   const data = req.body;
 
-  const filePath = getFilePath(id);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "Installation not found" });
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // 1️⃣ UPDATE installation
+    await client.query(
+      `
+      UPDATE prs_installations
+      SET
+        revision_number = $1,
+        process_type = $2,
+        coding_scheme = $3,
+        document_date = $4,
+        updated_at = NOW()
+      WHERE id = $5
+      `,
+      [
+        data.revisionNumber,
+        data.processType,
+        data.codingScheme,
+        data.documentDate || null,
+        id,
+      ],
+    );
+
+    // 2️⃣ DELETE old series
+    await client.query(`DELETE FROM prs_series WHERE installation_id = $1`, [
+      id,
+    ]);
+
+    // 3️⃣ INSERT new series
+    for (const [businessType, s] of Object.entries(data.series || {})) {
+      await client.query(
+        `
+        INSERT INTO prs_series
+          (installation_id, business_type, enabled, hours)
+        VALUES ($1, $2, $3, $4)
+        `,
+        [id, businessType, s.enabled, JSON.stringify(s.hours)],
+      );
+    }
+
+    await client.query("COMMIT");
+    res.json({ status: "ok" });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
   }
-
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
-
-  res.json({ success: true });
-}
-
-/* ================= CLEAN FUNCTIONS (IMPORTANT) ================= */
-
-// 🔥 ОЦЯ ФУНКЦІЯ ПОТРІБНА ДЛЯ XML
-export function getInstallationById(id) {
-  const filePath = getFilePath(id);
-
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-
-  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }

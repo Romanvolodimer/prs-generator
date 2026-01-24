@@ -1,10 +1,9 @@
 import { Router } from "express";
 import {
+  listInstallations,
   createInstallation,
   getInstallation,
   saveInstallation,
-  listInstallations,
-  getInstallationById,
 } from "../services/installation.service.js";
 
 import { generateXML } from "../services/xml.service.js";

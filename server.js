@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import installationRoutes from "./src/routes/installation.routes.js";
+import "dotenv/config";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,3 +27,5 @@ app.get("/health", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
+console.log("DB URL exists:", !!process.env.DATABASE_URL);
