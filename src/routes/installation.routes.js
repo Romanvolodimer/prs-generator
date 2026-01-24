@@ -7,6 +7,7 @@ import {
 } from "../services/installation.service.js";
 
 import { generateXML } from "../services/xml.service.js";
+import { pool } from "../db.js";
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.get("/", listInstallations);
 // створити установку
 router.post("/", createInstallation);
 
-// отримати одну
+// отримати одну (для UI)
 router.get("/:id", getInstallation);
 
 // зберегти зміни
@@ -38,27 +39,65 @@ router.post("/:id", saveInstallation);
 router.get("/:id/xml", async (req, res) => {
   const { id } = req.params;
 
-  // 1️⃣ Отримуємо установку
-  const installation = await getInstallationById(id);
+  try {
+    // 1️⃣ Отримуємо установку з БД
+    const instRes = await pool.query(
+      `
+      SELECT
+        id AS "installationId",
+        name,
+        mrid AS "mRID",
+        revision_number AS "revisionNumber",
+        process_type AS "processType",
+        coding_scheme AS "codingScheme",
+        document_date AS "documentDate"
+      FROM prs_installations
+      WHERE id = $1
+      `,
+      [id],
+    );
 
-  if (!installation) {
-    return res.status(404).send("Installation not found");
+    if (instRes.rowCount === 0) {
+      return res.status(404).send("Installation not found");
+    }
+
+    const installation = instRes.rows[0];
+
+    // 2️⃣ Отримуємо серії
+    const seriesRes = await pool.query(
+      `
+      SELECT business_type, enabled, hours
+      FROM prs_series
+      WHERE installation_id = $1
+      `,
+      [id],
+    );
+
+    installation.series = {};
+    for (const row of seriesRes.rows) {
+      installation.series[row.business_type] = {
+        enabled: row.enabled,
+        hours: row.hours,
+      };
+    }
+
+    // 3️⃣ Генеруємо XML
+    const xml = generateXML(installation);
+
+    // 4️⃣ Назва файлу
+    const fileName = safeFileName(installation.name || installation.mRID);
+
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName}.xml"`,
+    );
+
+    res.send(xml);
+  } catch (err) {
+    console.error("XML DOWNLOAD ERROR:", err);
+    res.status(500).send("XML generation failed");
   }
-
-  // 2️⃣ Генеруємо XML
-  const xml = generateXML(installation);
-
-  // 3️⃣ Назва файлу
-  const fileName = safeFileName(installation.name || installation.mRID);
-
-  // 4️⃣ Заголовки
-  res.setHeader("Content-Type", "application/xml; charset=utf-8");
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="${fileName}.xml"`,
-  );
-
-  res.send(xml);
 });
 
 export default router;
