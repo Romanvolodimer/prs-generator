@@ -47,6 +47,7 @@ router.get("/:id/xml", async (req, res) => {
         id AS "installationId",
         name,
         mrid AS "mRID",
+        registered_resource AS "registeredResource",
         revision_number AS "revisionNumber",
         process_type AS "processType",
         coding_scheme AS "codingScheme",
