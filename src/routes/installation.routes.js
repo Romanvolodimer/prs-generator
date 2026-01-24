@@ -20,10 +20,18 @@ function safeFileName(name) {
     .replace(/\s+/g, "_")
     .replace(/[^a-z0-9а-яёіїє_-]/gi, "");
 }
-function formatDateUA(dateStr) {
-  // очікує YYYY-MM-DD
-  const [y, m, d] = dateStr.split("-");
-  return `${d}.${m}.${y}`;
+function formatDateUA(dateValue) {
+  if (!dateValue) return "no-date";
+
+  const d = dateValue instanceof Date ? dateValue : new Date(dateValue);
+
+  if (isNaN(d.getTime())) return "no-date";
+
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+
+  return `${day}.${month}.${year}`;
 }
 
 /* ================= ROUTES ================= */
@@ -91,12 +99,10 @@ router.get("/:id/xml", async (req, res) => {
     const xml = generateXML(installation);
 
     // 4️⃣ Назва файлу
-    const docDate = installation.documentDate
-      ? formatDateUA(installation.documentDate)
-      : "no-date";
+    const docDate = formatDateUA(installation.documentDate);
 
     const fileName = safeFileName(
-      `${installation.name || installation.mRID}_${installation.revisionNumber}_${docDate}`,
+      `${installation.name || installation.mRID}--V${installation.revisionNumber}-:${docDate}`,
     );
 
     res.setHeader("Content-Type", "application/xml; charset=utf-8");
