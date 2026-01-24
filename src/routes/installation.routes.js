@@ -86,7 +86,9 @@ router.get("/:id/xml", async (req, res) => {
     const xml = generateXML(installation);
 
     // 4️⃣ Назва файлу
-    const fileName = safeFileName(installation.name || installation.mRID);
+    const fileName = safeFileName(
+      `${installation.name || installation.mRID}_${installation.documentDate}`,
+    );
 
     res.setHeader("Content-Type", "application/xml; charset=utf-8");
     res.setHeader(
