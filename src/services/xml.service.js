@@ -92,8 +92,8 @@ export function generateXML(data) {
   /* ===== TIME INTERVAL ===== */
   const timeIntervalXML = `
                         <timeInterval>
-                            <start>${startDate}T22:00Z</start>
-                            <end>${endDate}T22:00Z</end>
+                            <start>${startDate}T21:00Z</start>
+                            <end>${endDate}T21:00Z</end>
                         </timeInterval>`;
 
   /* ===== TIME SERIES ===== */
@@ -138,8 +138,8 @@ export function generateXML(data) {
     <createdDateTime>${createdDateTime}</createdDateTime>
 
     <schedule_Period.timeInterval>
-        <start>${startDate}T22:00Z</start>
-        <end>${endDate}T22:00Z</end>
+        <start>${startDate}T21:00Z</start>
+        <end>${endDate}T21:00Z</end>
     </schedule_Period.timeInterval>
 
 ${seriesXML}
