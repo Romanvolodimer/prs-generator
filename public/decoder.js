@@ -122,15 +122,21 @@ function getChild(parent, name) {
 function getText(parent, path) {
   if (!parent) return "—";
 
+  // Спочатку шукаємо елемент із повною назвою
+  const exactElement = getChild(parent, path);
+
+  if (exactElement) {
+    return exactElement.textContent.trim() || "—";
+  }
+
+  // Якщо не знайдено — шукаємо як вкладені елементи
   const parts = path.split(".");
   let current = parent;
 
   for (const part of parts) {
     current = getChild(current, part);
 
-    if (!current) {
-      return "—";
-    }
+    if (!current) return "—";
   }
 
   return current.textContent.trim() || "—";
@@ -170,7 +176,9 @@ function formatDate(value) {
 
 // Відображення інформації про документ
 function renderDocument(root) {
-  const interval = getChild(root, "schedule_Period");
+  const interval =
+    getChild(root, "schedule_Period.timeInterval") ||
+    getChild(getChild(root, "schedule_Period"), "timeInterval");
 
   documentInfo.innerHTML = `
         <p><b>mRID:</b> ${escapeHtml(getText(root, "mRID"))}</p>
