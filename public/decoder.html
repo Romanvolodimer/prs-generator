@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRS Decoder</title>
+    <link rel="stylesheet" href="decoder.css">
+</head>
+
+<body>
+
+    <h1>PRS Decoder</h1>
+
+    <a href="/" class="nav-button">← Назад до PRS Generator</a>
+
+    <section class="box">
+        <h2>Розшифрування XML</h2>
+
+        <div id="dropZone" class="upload-zone">
+            <strong>Перетягніть XML-файл сюди</strong>
+            <p>або</p>
+
+            <label for="xmlFile" class="upload-button">
+                Обрати файл
+            </label>
+
+            <input type="file" id="xmlFile" accept=".xml,text/xml">
+        </div>
+
+        <div id="fileInfo"></div>
+        <div id="errorMessage" class="hidden"></div>
+    </section>
+
+    <section id="resultContainer" class="box hidden">
+        <h2>Інформація про документ</h2>
+        <div id="documentInfo"></div>
+
+        <h2>Часові ряди</h2>
+        <div id="seriesContainer"></div>
+    </section>
+    <script src="decoder.js"></script>
+</body>
+
+</html>
