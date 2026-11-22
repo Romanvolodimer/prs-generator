@@ -64,3 +64,20 @@ button {
 .tata {
     width: 150px !important;
 }
+
+.xml-import-control {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 12px 10px 0;
+    padding: 10px 12px;
+    border: 1px dashed #888;
+    border-radius: 5px;
+    cursor: pointer;
+    max-width: 360px;
+}
+
+.xml-import-control input {
+    width: auto;
+    max-width: 100%;
+}

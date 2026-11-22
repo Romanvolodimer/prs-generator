@@ -20,6 +20,11 @@
             <option value="">— Оберіть установку —</option>
         </select>
 
+        <label class="xml-import-control">
+            <span>📂 Завантажити старий PRS для редагування</span>
+            <input type="file" id="importXmlFile" accept=".xml,text/xml,application/xml" />
+        </label>
+
         <button id="addInstallationBtn">➕ Додати установку</button>
 
         <button id="addInstallationBtn"><a href="decoder.html" class="nav-button">
@@ -56,6 +61,31 @@
             </select>
         </label>
 
+        <label>
+            Тип документа
+            <input type="text" id="documentType" value="A14" />
+        </label>
+
+        <label>
+            Роль відправника
+            <input type="text" id="senderRole" value="A27" />
+        </label>
+
+        <label>
+            mRID отримувача
+            <input type="text" id="receiverMRID" value="10X1001C--00001X" />
+        </label>
+
+        <label>
+            CodingScheme отримувача
+            <input type="text" id="receiverCodingScheme" value="A01" />
+        </label>
+
+        <label>
+            Роль отримувача
+            <input type="text" id="receiverRole" value="A04" />
+        </label>
+
         <label style="display: none;">
             sender_MarketParticipant.mRID@codingScheme
             <input type="text" id="codingScheme" value="A01" />
@@ -82,6 +112,7 @@
 
     </section>
 
+    <script src="xml-parser.js"></script>
     <script src="app.js"></script>
 </body>
 

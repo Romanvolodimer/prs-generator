@@ -1,5 +1,19 @@
 /* ===================== HELPERS ===================== */
 
+function xmlEscape(value) {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&apos;",
+      })[char],
+  );
+}
+
 function formatDate(date) {
   return date.toISOString().split("T")[0];
 }
@@ -75,7 +89,18 @@ ${generatePoints(hours)}
 /* ===================== DOCUMENT ===================== */
 
 export function generateXML(data) {
-  const { mRID, revisionNumber, processType, documentDate, series } = data;
+  const {
+    mRID,
+    revisionNumber,
+    processType,
+    documentDate,
+    series,
+    documentType = "A14",
+    senderRole = "A27",
+    receiverMRID = "10X1001C--00001X",
+    receiverCodingScheme = "A01",
+    receiverRole = "A04",
+  } = data;
 
   const createdDateTime = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
@@ -125,15 +150,15 @@ export function generateXML(data) {
 
     <mRID>${documentMRID}</mRID>
     <revisionNumber>${revisionNumber}</revisionNumber>
-    <type>A14</type>
-    <process.processType>${processType}</process.processType>
+    <type>${xmlEscape(documentType)}</type>
+    <process.processType>${xmlEscape(processType)}</process.processType>
 
     <sender_MarketParticipant.mRID
-    codingScheme="A01">${mRID}</sender_MarketParticipant.mRID>
-    <sender_MarketParticipant.marketRole.type>A27</sender_MarketParticipant.marketRole.type>
+    codingScheme="${xmlEscape(data.codingScheme || "A01")}">${xmlEscape(mRID)}</sender_MarketParticipant.mRID>
+    <sender_MarketParticipant.marketRole.type>${xmlEscape(senderRole)}</sender_MarketParticipant.marketRole.type>
 
-    <receiver_MarketParticipant.mRID codingScheme="A01">10X1001C--00001X</receiver_MarketParticipant.mRID>
-    <receiver_MarketParticipant.marketRole.type>A04</receiver_MarketParticipant.marketRole.type>
+    <receiver_MarketParticipant.mRID codingScheme="${xmlEscape(data.receiverCodingScheme || "A01")}">${xmlEscape(receiverMRID)}</receiver_MarketParticipant.mRID>
+    <receiver_MarketParticipant.marketRole.type>${xmlEscape(receiverRole)}</receiver_MarketParticipant.marketRole.type>
 
     <createdDateTime>${createdDateTime}</createdDateTime>
 

@@ -69,7 +69,50 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// 🔥 ЗАВАНТАЖЕННЯ XML
+// Генерація XML з поточного стану форми (включно з імпортованими метаданими)
+router.post("/:id/xml", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const instRes = await pool.query(
+      `SELECT id AS "installationId", name, mrid AS "mRID",
+              registered_resource AS "registeredResource"
+       FROM prs_installations WHERE id = $1`,
+      [id],
+    );
+
+    if (instRes.rowCount === 0) {
+      return res.status(404).send("Installation not found");
+    }
+
+    const data = {
+      ...instRes.rows[0],
+      ...req.body,
+      // Ідентифікатор відправника завжди беремо з обраної установки.
+      mRID: instRes.rows[0].mRID,
+      registeredResource: instRes.rows[0].registeredResource,
+    };
+
+    const xml = generateXML(data);
+    const docDate = formatDateUA(data.documentDate);
+    const fileName = safeFileName(
+      `${data.name || data.mRID}--V${data.revisionNumber}-${docDate}`,
+    );
+
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName}.xml"`,
+    );
+    res.send(xml);
+  } catch (err) {
+    console.error("XML GENERATION ERROR:", err);
+    res.status(500).send("XML generation failed");
+  }
+});
+
+// 🔥 ЗАВАНТАЖЕННЯ XML (збережені в БД дані)
+// Старий GET endpoint залишено для сумісності.
 router.get("/:id/xml", async (req, res) => {
   const { id } = req.params;
 

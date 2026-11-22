@@ -10,12 +10,22 @@ const revisionNumberInput = document.getElementById("revisionNumber");
 const processTypeInput = document.getElementById("processType");
 const codingSchemeInput = document.getElementById("codingScheme");
 const yearInput = document.getElementById("year");
+const documentTypeInput = document.getElementById("documentType");
+const senderRoleInput = document.getElementById("senderRole");
+const receiverMRIDInput = document.getElementById("receiverMRID");
+const receiverCodingSchemeInput = document.getElementById(
+  "receiverCodingScheme",
+);
+const receiverRoleInput = document.getElementById("receiverRole");
 
 const seriesContainer = document.getElementById("seriesContainer");
 const saveBtn = document.getElementById("saveBtn");
 const previewBtn = document.getElementById("previewBtn");
 
 const deleteBtn = document.getElementById("deleteBtn");
+const importXmlFile = document.getElementById("importXmlFile");
+
+let installationsCache = [];
 
 const BUSINESS_TYPES = {
   A01: "Плановий відпуск",
@@ -45,6 +55,7 @@ async function loadInstallations() {
     '<option value="">— Оберіть установку —</option>';
 
   const installations = await api("/api/installations");
+  installationsCache = installations;
   installations.forEach((inst) => {
     const option = document.createElement("option");
     option.value = inst.installationId;
@@ -100,6 +111,13 @@ async function loadInstallation(id) {
   processTypeInput.value = currentInstallation.processType;
   codingSchemeInput.value = currentInstallation.codingScheme;
   yearInput.value = currentInstallation.year;
+  documentTypeInput.value = currentInstallation.documentType || "A14";
+  senderRoleInput.value = currentInstallation.senderRole || "A27";
+  receiverMRIDInput.value =
+    currentInstallation.receiverMRID || "10X1001C--00001X";
+  receiverCodingSchemeInput.value =
+    currentInstallation.receiverCodingScheme || "A01";
+  receiverRoleInput.value = currentInstallation.receiverRole || "A04";
 
   renderSeries(currentInstallation.series || {});
   formContainer.classList.remove("hidden");
@@ -166,6 +184,11 @@ function collectData() {
     processType: processTypeInput.value,
     codingScheme: codingSchemeInput.value,
     year: Number(yearInput.value),
+    documentType: documentTypeInput.value,
+    senderRole: senderRoleInput.value,
+    receiverMRID: receiverMRIDInput.value,
+    receiverCodingScheme: receiverCodingSchemeInput.value,
+    receiverRole: receiverRoleInput.value,
     series: {},
   };
 
@@ -205,22 +228,122 @@ previewBtn.onclick = () => {
   alert("JSON виведено в console.log()");
 };
 
+/* ================= XML IMPORT ================= */
+
+if (importXmlFile) {
+  importXmlFile.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      if (!file.name.toLowerCase().endsWith(".xml")) {
+        throw new Error("Оберіть XML-файл.");
+      }
+
+      const xmlText = await file.text();
+      const imported = window.PRSXmlParser.parse(xmlText);
+
+      if (!imported.documentDate) {
+        throw new Error("У XML не вдалося визначити дату графіка.");
+      }
+      if (!imported.mRID) {
+        throw new Error("У XML відсутній mRID відправника.");
+      }
+
+      // Визначаємо установку за mRID відправника.
+      const matched = installationsCache.find(
+        (item) => String(item.mRID).trim() === String(imported.mRID).trim(),
+      );
+
+      if (!matched) {
+        throw new Error(
+          `Установку з mRID "${imported.mRID}" не знайдено. Спочатку додайте її або перевірте mRID у налаштуваннях установок.`,
+        );
+      }
+
+      installationSelect.value = String(matched.installationId);
+      await loadInstallation(matched.installationId);
+
+      // Переносимо параметри саме з імпортованого документа.
+      documentDateInput.value = imported.documentDate;
+      revisionNumberInput.value = imported.revisionNumber;
+      processTypeInput.value = imported.processType;
+      codingSchemeInput.value = imported.senderCodingScheme || "A01";
+      yearInput.value = Number(imported.documentDate.slice(0, 4));
+      documentTypeInput.value = imported.documentType || "A14";
+      senderRoleInput.value = imported.senderRole || "A27";
+      receiverMRIDInput.value = imported.receiverMRID || "10X1001C--00001X";
+      receiverCodingSchemeInput.value = imported.receiverCodingScheme || "A01";
+      receiverRoleInput.value = imported.receiverRole || "A04";
+
+      // Не губимо бізнес-типи, навіть якщо їх ще немає у стандартному переліку.
+      const importedSeries = { ...imported.series };
+      Object.keys(importedSeries).forEach((code) => {
+        if (!Object.prototype.hasOwnProperty.call(BUSINESS_TYPES, code)) {
+          BUSINESS_TYPES[code] = "Імпортований бізнес-тип";
+        }
+      });
+
+      renderSeries(importedSeries);
+
+      alert(
+        `XML успішно завантажено для редагування.\n` +
+          `Установка: ${matched.name}\n` +
+          `Дата: ${imported.documentDate}\n` +
+          `Revision: ${imported.revisionNumber}\n` +
+          `Бізнес-типів: ${imported.seriesCount}\n\n` +
+          `revisionNumber залишено без змін.`,
+      );
+    } catch (error) {
+      console.error("PRS XML IMPORT ERROR:", error);
+      alert(error.message || "Не вдалося імпортувати XML.");
+    } finally {
+      // Дозволяє повторно вибрати той самий файл.
+      importXmlFile.value = "";
+    }
+  });
+}
+
 /* ================= INIT ================= */
 
 yearInput.value = new Date().getFullYear();
 loadInstallations();
 
-downloadXmlBtn.onclick = () => {
+downloadXmlBtn.onclick = async () => {
   if (!currentInstallation) {
     alert("Оберіть установку");
     return;
   }
 
-  // ⚠️ ВАЖЛИВО: тут НЕ fetch, а просто відкриття URL
-  window.open(
-    `/api/installations/${currentInstallation.installationId}/xml`,
-    "_blank",
-  );
+  try {
+    const data = collectData();
+    const response = await fetch(
+      `/api/installations/${currentInstallation.installationId}/xml`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      },
+    );
+
+    if (!response.ok) throw new Error(await response.text());
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match?.[1] || "PRS.xml";
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("XML DOWNLOAD ERROR:", error);
+    alert(error.message || "Не вдалося згенерувати XML.");
+  }
 };
 /* ================= DOWNLOAD XML ================= */
 
