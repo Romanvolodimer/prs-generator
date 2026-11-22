@@ -246,9 +246,9 @@ if (importXmlFile) {
       if (!imported.documentDate) {
         throw new Error("У XML не вдалося визначити дату графіка.");
       }
-      if (!imported.mRID) {
-        throw new Error("У XML відсутній mRID відправника.");
-      }
+      // if (!imported.mRID) {
+      //   throw new Error("У XML відсутній mRID відправника.");
+      // }
 
       // Визначаємо установку за mRID відправника.
       const matched = installationsCache.find(

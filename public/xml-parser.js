@@ -1,6 +1,7 @@
 (function () {
   function child(parent, name) {
     if (!parent) return null;
+
     return (
       Array.from(parent.children).find((node) => node.localName === name) ||
       null
@@ -9,12 +10,24 @@
 
   function text(parent, path) {
     if (!parent) return "";
+
+    // Спочатку шукаємо повну назву XML-елемента
+    const direct = child(parent, path);
+
+    if (direct) {
+      return direct.textContent.trim();
+    }
+
+    // Якщо елемент вкладений, розбираємо шлях через крапку
     const parts = path.split(".");
     let current = parent;
+
     for (const part of parts) {
       current = child(current, part);
+
       if (!current) return "";
     }
+
     return current.textContent.trim();
   }
 
