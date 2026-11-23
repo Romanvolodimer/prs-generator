@@ -31,7 +31,8 @@ const BUSINESS_TYPES = {
   A01: "Плановий відпуск",
   A04: "Споживання",
   A60: "Тех мін",
-  A61: "Тех макс",
+  A61_A01: "Тех макс (A01)",
+  A61_A02: "Тех макс (A02)",
   A96: "АРВЧ",
 };
 
@@ -129,7 +130,12 @@ function renderSeries(seriesData) {
   seriesContainer.innerHTML = "";
 
   Object.entries(BUSINESS_TYPES).forEach(([code, label]) => {
-    const series = seriesData[code] || { enabled: false, hours: [] };
+    const series = seriesData[code] || {
+      enabled: false,
+      hours: [],
+      businessType: code.startsWith("A61_") ? "A61" : code,
+      flowDirection: code === "A61_A02" ? "A02" : "A01",
+    };
 
     const box = document.createElement("div");
     box.className = "box";
@@ -205,6 +211,8 @@ function collectData() {
     data.series[code] = {
       enabled: true,
       hours,
+      businessType: code.startsWith("A61_") ? "A61" : code,
+      flowDirection: code === "A61_A02" ? "A02" : "A01",
     };
   });
 

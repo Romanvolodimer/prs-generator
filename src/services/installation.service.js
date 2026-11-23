@@ -91,7 +91,7 @@ export async function getInstallation(req, res) {
 
     const seriesRes = await client.query(
       `
-      SELECT business_type, enabled, hours
+      SELECT business_type, flow_direction, enabled, hours
       FROM prs_series
       WHERE installation_id = $1
       `,
@@ -99,10 +99,18 @@ export async function getInstallation(req, res) {
     );
 
     installation.series = {};
+
     for (const row of seriesRes.rows) {
-      installation.series[row.business_type] = {
+      const key =
+        row.business_type === "A61"
+          ? `A61_${row.flow_direction || "A01"}`
+          : row.business_type;
+
+      installation.series[key] = {
         enabled: row.enabled,
         hours: row.hours,
+        businessType: row.business_type,
+        flowDirection: row.flow_direction || "A01",
       };
     }
 
@@ -156,10 +164,16 @@ export async function saveInstallation(req, res) {
       await client.query(
         `
         INSERT INTO prs_series
-          (installation_id, business_type, enabled, hours)
-        VALUES ($1, $2, $3, $4)
+        (installation_id, business_type, flow_direction, enabled, hours)
+        VALUES ($1, $2, $3, $4, $5) 
         `,
-        [id, businessType, s.enabled, JSON.stringify(s.hours)],
+        [
+          id,
+          s.businessType || businessType,
+          s.flowDirection || "A01",
+          s.enabled,
+          JSON.stringify(s.hours),
+        ],
       );
     }
 

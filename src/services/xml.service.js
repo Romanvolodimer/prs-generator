@@ -56,6 +56,7 @@ const FLOW_DIRECTION_TYPES = ["A60", "A61", "A96"];
 function generateTimeSeries({
   index,
   businessType,
+  flowDirection,
   timeIntervalXML,
   hours,
   installationCode,
@@ -63,7 +64,7 @@ function generateTimeSeries({
 }) {
   const flowDirectionXML = FLOW_DIRECTION_TYPES.includes(businessType)
     ? `
-                <flowDirection.direction>A01</flowDirection.direction>`
+                <flowDirection.direction>${flowDirection || "A01"}</flowDirection.direction>`
     : "";
 
   return `
@@ -122,19 +123,27 @@ export function generateXML(data) {
                         </timeInterval>`;
 
   /* ===== TIME SERIES ===== */
+  /* ===== TIME SERIES ===== */
   let seriesXML = "";
   let counter = 1;
 
-  for (const [businessType, s] of Object.entries(series)) {
+  for (const [seriesKey, s] of Object.entries(series || {})) {
     if (!s.enabled) continue;
+
+    const businessType =
+      s.businessType || (seriesKey.startsWith("A61_") ? "A61" : seriesKey);
+
+    const flowDirection =
+      s.flowDirection || (seriesKey === "A61_A02" ? "A02" : "A01");
 
     seriesXML += generateTimeSeries({
       index: counter,
       businessType,
+      flowDirection,
       timeIntervalXML,
       hours: s.hours,
       installationCode: mRID,
-      registeredResource: data.registeredResource, // 👈
+      registeredResource: data.registeredResource,
     });
 
     counter++;

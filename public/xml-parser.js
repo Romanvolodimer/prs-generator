@@ -102,9 +102,16 @@
         }
       }
 
-      series[businessType] = {
+      const flowDirection = text(node, "flowDirection.direction") || "A01";
+
+      const seriesKey =
+        businessType === "A61" ? `A61_${flowDirection}` : businessType;
+
+      series[seriesKey] = {
         enabled: true,
         hours,
+        businessType,
+        flowDirection,
       };
     }
 

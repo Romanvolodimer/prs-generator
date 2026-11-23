@@ -139,23 +139,28 @@ router.get("/:id/xml", async (req, res) => {
       return res.status(404).send("Installation not found");
     }
 
-    const installation = instRes.rows[0];
-
-    // 2️⃣ Отримуємо серії
     const seriesRes = await pool.query(
       `
-      SELECT business_type, enabled, hours
-      FROM prs_series
-      WHERE installation_id = $1
+       SELECT business_type, flow_direction, enabled, hours
+       FROM prs_series
+       WHERE installation_id = $1
       `,
       [id],
     );
 
     installation.series = {};
+
     for (const row of seriesRes.rows) {
-      installation.series[row.business_type] = {
+      const key =
+        row.business_type === "A61"
+          ? `A61_${row.flow_direction || "A01"}`
+          : row.business_type;
+
+      installation.series[key] = {
         enabled: row.enabled,
         hours: row.hours,
+        businessType: row.business_type,
+        flowDirection: row.flow_direction || "A01",
       };
     }
 
